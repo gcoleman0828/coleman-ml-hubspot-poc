@@ -1,0 +1,44 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Coleman POC - MeridianLink DataConnect to HubSpot via AWS Lambda and Workato.
+  Lambda is triggered by S3 ObjectCreated events when MeridianLink DataConnect
+  delivers normalized delta files to the landing bucket. The function filters
+  for booked retail, HELOC, and mortgage loans, deduplicates on application_id,
+  and posts individual records to a Workato webhook. Workato then upserts the
+  member as a HubSpot Contact, creates a linked Deal with loan amount and GCLID
+  for campaign attribution, and enrolls the contact in a post-booking email
+  workflow pending manual approval before send.
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 128
+    Runtime: python3.13
+
+Resources:
+
+  ColemanDataConnectBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: coleman-poc-dataconnect-339713097106
+
+  ColemanMLProcessor:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: coleman-ml-processor
+      CodeUri: lambda/
+      Handler: handler.main
+      Description: Reads ML DataConnect delta files, filters booked loans, posts to Workato
+      Environment:
+        Variables:
+          WORKATO_WEBHOOK_URL: "REPLACE_ME"
+      Events:
+        S3Trigger:
+          Type: S3
+          Properties:
+            Bucket: !Ref ColemanDataConnectBucket
+            Events: s3:ObjectCreated:*
+      Policies:
+        - S3ReadPolicy:
+            BucketName: coleman-poc-dataconnect-339713097106
