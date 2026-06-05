@@ -1,0 +1,14 @@
+# SAM build artifacts
+.aws-sam/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# AWS credentials (safety net - never commit these)
+.env
+*.env
+
+# VS Code workspace settings
+.vscode/
